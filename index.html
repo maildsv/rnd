@@ -20,8 +20,15 @@
     .draw { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     button, select { border:1px solid #111; background:#111; color:#fff; padding:10px 14px; border-radius:10px; font-size:15px; }
     select { background:#fff; color:#111; border-color:#ccc; }
+
     .imageBox { text-align:center; margin-top:10px; }
-    .imageBox img { max-width:100%; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+    .imageBox a { display:inline-block; }
+    .imageBox img {
+      max-width:100%;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    }
+
     .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:8px; margin-top:10px; }
     .item { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; }
     .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -33,7 +40,7 @@
 <body>
   <div class="wrap">
     <h1>Tarot Drawer</h1>
-    <p class="hint">Draw a random card and open its meaning.</p>
+    <p class="hint">Draw a card when ready.</p>
 
     <div class="card">
       <div class="draw">
@@ -45,14 +52,16 @@
           <option value="keen">Keen</option>
         </select>
         <div id="current">
-          <a id="currentLink" href="#" target="_blank" rel="noopener"></a>
+          <a id="currentLink">Draw a card</a>
           <span class="siteNow" id="currentSite"></span>
           <span id="currentArcana"></span>
         </div>
       </div>
 
       <div class="imageBox">
-        <img id="cardImage" src="" alt="Card image"/>
+        <a id="imageLink">
+          <img id="cardImage" src="images/back.jpg" alt="Card image"/>
+        </a>
       </div>
     </div>
 
@@ -118,6 +127,7 @@ const currentSite = document.getElementById('currentSite');
 const currentArcana = document.getElementById('currentArcana');
 const sitePick = document.getElementById('sitePick');
 const cardImage = document.getElementById('cardImage');
+const imageLink = document.getElementById('imageLink');
 
 let lastCard = null;
 
@@ -137,9 +147,17 @@ function renderList(){
 
 function updateCurrent(){
   if (!lastCard) return;
+
   const site = sitePick.value;
+  const url = siteBuilders[site].url(lastCard);
+
   currentLink.textContent = lastCard.name;
-  currentLink.href = siteBuilders[site].url(lastCard);
+  currentLink.href = url;
+  currentLink.target = "_blank";
+
+  imageLink.href = url;
+  imageLink.target = "_blank";
+
   currentSite.textContent = `(${siteBuilders[site].label})`;
   currentArcana.textContent = ` — ${lastCard.arcana}`;
 
@@ -157,7 +175,6 @@ sitePick.addEventListener('change', () => { renderList(); updateCurrent(); });
 drawBtn.addEventListener('click', draw);
 
 renderList();
-draw();   // ← Auto-draw on page load
 
 if ('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
