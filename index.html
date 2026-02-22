@@ -2,94 +2,172 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111111"/>
   <title>Tarot Drawer</title>
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+
   <style>
-    :root { --fg:#111; --bg:#f4f4f9; --accent:#0b57d0; }
-    body { 
-      margin:0; font-family: system-ui, sans-serif; 
-      background:var(--bg); color:var(--fg); 
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 100vh; text-align: center;
-    }
-    .card-display {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      width: 80%;
-      max-width: 400px;
-      margin-bottom: 20px;
-    }
-    h1 { font-size: 1.2rem; color: #6b7280; margin-bottom: 2rem; }
-    #current { font-size: 1.8rem; font-weight: bold; margin-bottom: 10px; }
-    #current a { color: var(--accent); text-decoration: none; border-bottom: 2px solid #e5e7eb; }
-    .arcana { font-size: 0.9rem; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
-    
-    button { 
-      appearance:none; border:none; background:var(--fg); color:#fff; 
-      padding: 15px 30px; border-radius: 50px; font-size: 16px; font-weight: 600;
-      cursor: pointer; transition: transform 0.1s;
-    }
-    button:active { transform: scale(0.95); }
-    .footer-links { margin-top: 30px; font-size: 12px; opacity: 0.5; }
+    :root { --fg:#111; --bg:#fafafa; --muted:#6b7280; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--fg); }
+    .wrap { max-width:860px; margin:0 auto; padding:16px; }
+    h1 { font-size:22px; margin:0 0 8px; }
+    .hint { color:var(--muted); font-size:14px; margin:0 0 12px; }
+    .card { margin:12px 0 16px; padding:16px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
+    .draw { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    button, select { border:1px solid #111; background:#111; color:#fff; padding:10px 14px; border-radius:10px; font-size:15px; }
+    select { background:#fff; color:#111; border-color:#ccc; }
+    .imageBox { text-align:center; margin-top:10px; }
+    .imageBox img { max-width:100%; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:8px; margin-top:10px; }
+    .item { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .site { font-size:12px; color:#555; }
+    #current a { font-weight:600; }
+    #current .siteNow { margin-left:8px; font-size:12px; color:#555; }
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <h1>Tarot Drawer</h1>
+    <p class="hint">Draw a random card and open its meaning.</p>
 
-  <h1>Your Daily Draw</h1>
+    <div class="card">
+      <div class="draw">
+        <button id="drawBtn">Draw</button>
+        <select id="sitePick">
+          <option value="tarotcom">Tarot.com</option>
+          <option value="biddy">Biddy Tarot</option>
+          <option value="labyrinthos">Labyrinthos</option>
+          <option value="keen">Keen</option>
+        </select>
+        <div id="current">
+          <a id="currentLink" href="#" target="_blank" rel="noopener"></a>
+          <span class="siteNow" id="currentSite"></span>
+          <span id="currentArcana"></span>
+        </div>
+      </div>
 
-  <div class="card-display">
-    <div id="current">Focusing...</div>
-    <div id="arcana" class="arcana"></div>
+      <div class="imageBox">
+        <img id="cardImage" src="" alt="Card image"/>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reference</h2>
+      <div class="grid" id="list"></div>
+    </div>
   </div>
 
-  <button id="drawBtn">Draw Again</button>
+<script>
+const majors = [
+  "The Fool","The Magician","The High Priestess","The Empress","The Emperor","The Hierophant","The Lovers","The Chariot",
+  "Strength","The Hermit","Wheel of Fortune","Justice","The Hanged Man","Death","Temperance","The Devil",
+  "The Tower","The Star","The Moon","The Sun","Judgement","The World"
+];
 
-  <script>
-const majors = ["The Fool","The Magician","The High Priestess","The Empress","The Emperor","The Hierophant","The Lovers","The Chariot","Strength","The Hermit","Wheel of Fortune","Justice","The Hanged Man","Death","Temperance","The Devil","The Tower","The Star","The Moon","The Sun","Judgement","The World"];
-  const ranks = ["Ace","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Page","Knight","Queen","King"];
-  const suits = ["Wands","Cups","Swords","Coins"];
+const ranks = ["Ace","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Page","Knight","Queen","King"];
+const suits = ["Wands","Cups","Swords","Pentacles"];
 
-  function slugify(s){ 
-    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); 
+function buildDeck(){
+  const deck = [];
+  majors.forEach(name => deck.push({ name, arcana:"Major Arcana" }));
+  suits.forEach(suit => ranks.forEach(rank => deck.push({
+    name: `${rank} of ${suit}`,
+    arcana:"Minor Arcana"
+  })));
+  return deck;
+}
+const deck = buildDeck();
+
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+
+const imagePath = name => `images/${slugify(name)}.jpg`;
+
+const siteBuilders = {
+  tarotcom: {
+    label: "Tarot.com",
+    url: card => `https://www.tarot.com/tarot/cards/${slugify(card.name.replace("Pentacles","Coins"))}`
+  },
+  biddy: {
+    label: "Biddy Tarot",
+    url(card){
+      if (card.arcana === "Major Arcana"){
+        return `https://biddytarot.com/tarot-card-meanings/major-arcana/${slugify(card.name.replace(/^The /,''))}/`;
+      }
+      const [rank, suit] = card.name.split(" of ");
+      return `https://biddytarot.com/tarot-card-meanings/minor-arcana/suit-of-${slugify(suit)}/${slugify(rank)}-of-${slugify(suit)}/`;
+    }
+  },
+  labyrinthos: {
+    label: "Labyrinthos",
+    url: card => `https://labyrinthos.co/blogs/tarot-card-meanings-list/${slugify(card.name)}-meaning-tarot-card-meanings`
+  },
+  keen: {
+    label: "Keen",
+    url: card => `https://www.keen.com/articles/tarot/${slugify(card.name)}-tarot-card`
   }
-  
-  function buildDeck(){
-    const deck = [];
-    majors.forEach((name, index) => deck.push({ name, arcana: "Major", num: index }));
-    suits.forEach(suit => ranks.forEach(rank => {
-      const displaySuit = suit === "Coins" ? "Pentacles" : suit;
-      deck.push({ name: `${rank} of ${displaySuit}`, arcana: "Minor", urlSuit: suit });
-    }));
-    return deck;
-  }
-  
-  const deck = buildDeck();
+};
 
-  function draw(){
-    const card = deck[Math.floor(Math.random()*deck.length)];
-    const nameForUrl = card.urlSuit ? card.name.replace("Pentacles", card.urlSuit) : card.name;
-    const slug = slugify(nameForUrl);
-    
-    // The Image URL (using a reliable tarot card image source)
-    const imgUrl = `https://www.tarot.com/images/tarot/cards/rider-waite/${slug}.jpg`;
-    const pageUrl = `https://www.tarot.com/tarot/cards/${slug}`;
-    
-    // Update the UI
-    document.getElementById('current').innerHTML = `
-      <a href="${pageUrl}" target="_blank">
-        <img src="${imgUrl}" alt="${card.name}" style="width:100%; max-width:200px; border-radius:10px; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-        <br>${card.name}
-      </a>`;
-    document.getElementById('arcana').innerText = card.arcana + " Arcana";
-  }
+const list = document.getElementById('list');
+const drawBtn = document.getElementById('drawBtn');
+const currentLink = document.getElementById('currentLink');
+const currentSite = document.getElementById('currentSite');
+const currentArcana = document.getElementById('currentArcana');
+const sitePick = document.getElementById('sitePick');
+const cardImage = document.getElementById('cardImage');
 
-  window.onload = draw;
-  document.getElementById('drawBtn').addEventListener('click', draw);
-  </script>
+let lastCard = null;
+
+function renderList(){
+  list.innerHTML = "";
+  deck.forEach(card => {
+    const site = sitePick.value;
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `<div class="row">
+        <a href="${siteBuilders[site].url(card)}" target="_blank">${card.name}</a>
+        <span class="site">${siteBuilders[site].label}</span>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function updateCurrent(){
+  if (!lastCard) return;
+  const site = sitePick.value;
+  currentLink.textContent = lastCard.name;
+  currentLink.href = siteBuilders[site].url(lastCard);
+  currentSite.textContent = `(${siteBuilders[site].label})`;
+  currentArcana.textContent = ` — ${lastCard.arcana}`;
+  cardImage.src = imagePath(lastCard.name);
+}
+
+function draw(){
+  lastCard = deck[Math.floor(Math.random()*deck.length)];
+  localStorage.setItem("lastCard", JSON.stringify(lastCard));
+  updateCurrent();
+}
+
+sitePick.addEventListener('change', () => { renderList(); updateCurrent(); });
+drawBtn.addEventListener('click', draw);
+
+// Show last drawn card immediately on open
+const saved = localStorage.getItem("lastCard");
+if (saved){
+  lastCard = JSON.parse(saved);
+  updateCurrent();
+}
+
+renderList();
+
+// Register service worker
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
 </body>
 </html>
