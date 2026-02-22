@@ -1,5 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tarot</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+:root { --fg:#111; --bg:#fafafa; --muted:#6b7280; }
+
+body {
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background:var(--bg);
+  color:var(--fg);
+}
+
+.wrap {
+  max-width:860px;
+  margin:0 auto;
+  padding:16px;
+}
+
+h1 {
+  font-size:22px;
+  text-align:center;
+  margin:0 0 10px;
+}
+
+#hint {
+  text-align:center;
+  font-size:15px;
+  color:var(--muted);
+  margin-bottom:10px;
+}
+
+.flip-container {
+  perspective: 1000px;
+  width: 240px;
+  margin: 0 auto 14px;
+}
+
+.flipper {
+  position: relative;
+  width: 240px;
+  height: 420px;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+  cursor:pointer;
+}
+
+.flipper img {
+  position:absolute;
+  width:100%;
+  height:100%;
+  backface-visibility:hidden;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
+
+.front { transform: rotateY(0deg); }
+.back  { transform: rotateY(180deg); }
+
+.flipped { transform: rotateY(180deg); }
+
+.controls {
+  text-align:center;
+  margin-bottom:8px;
+}
+
+button, select {
+  border:1px solid #111;
+  background:#111;
+  color:#fff;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:15px;
+  margin:4px;
+}
+
+select {
+  background:#fff;
+  color:#111;
+  border-color:#ccc;
+}
+
+#current {
+  text-align:center;
+  margin:6px 0 10px;
+}
+
+#current a {
+  font-weight:600;
+  text-decoration:none;
+  color:#0b57d0;
+}
+
+#currentArcana {
+  color:var(--muted);
+  font-size:13px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+.item {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  padding:10px;
+}
+
+.row {
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+}
+
+.site {
+  font-size:12px;
+  color:#555;
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<h1>Tarot</h1>
+<div id="hint">Tap the card</div>
+
+<div class="flip-container">
+  <div class="flipper" id="flipper">
+    <img class="front" id="cardFront" src="images/back.jpg" alt="Card back">
+    <img class="back" id="cardBack" src="" alt="Card face">
+  </div>
+</div>
+
+<div class="controls">
+  <button id="drawBtn">Draw</button>
+  <button id="resetBtn" style="display:none;">Reset</button>
+</div>
+
+<div id="current">
+  <a id="currentLink">Tap the card</a>
+  <div id="currentArcana"></div>
+</div>
+
+<div style="text-align:center;">
+<select id="sitePick">
+  <option value="tarotcom">Tarot.com</option>
+  <option value="biddy">Biddy Tarot</option>
+  <option value="labyrinthos">Labyrinthos</option>
+  <option value="keen">Keen</option>
+</select>
+</div>
+
+<div class="grid" id="list"></div>
+
+</div>
+
+<script>
+const majors = [
+  "The Fool","The Magician","The High Priestess","The Empress","The Emperor",
+  "The Hierophant","The Lovers","The Chariot","Strength","The Hermit",
+  "Wheel of Fortune","Justice","The Hanged Man","Death","Temperance",
+  "The Devil","The Tower","The Star","The Moon","The Sun","Judgement","The World"
+];
+
+const ranks = ["Ace","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Page","Knight","Queen","King"];
+const suits = ["Wands","Cups","Swords","Pentacles"];
+
+function buildDeck(){
+  const deck = [];
+  majors.forEach(name => deck.push({ name, arcana:"Major Arcana" }));
+  suits.forEach(suit => ranks.forEach(rank =>
+    deck.push({ name:`${rank} of ${suit}`, arcana:"Minor Arcana" })
+  ));
+  return deck;
+}
+const deck = buildDeck();
+
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+const imagePath = name => `images/${slugify(name)}.jpg`;
+
+const siteBuilders = {
+  tarotcom: {
+    label:"Tarot.com",
+    url:card => `https://www.tarot.com/tarot/cards/${slugify(card.name.replace("Pentacles","Coins"))}`
+  },
+  biddy: {
+    label:"Biddy Tarot",
+    url(card){
+      if (card.arcana === "Major Arcana")
+        return `https://biddytarot.com/tarot-card-meanings/major-arcana/${slugify(card.name.replace(/^The /,''))}/`;
+
+      const [rank, suit] = card.name.split(" of ");
+      return `https://biddytarot.com/tarot-card-meanings/minor-arcana/suit-of-${slugify(suit)}/${slugify(rank)}-of-${slugify(suit)}/`;
+    }
+  },
+  labyrinthos: {
+    label:"Labyrinthos",
+    url:card => `https://labyrinthos.co/blogs/tarot-card-meanings-list/${slugify(card.name)}-meaning-tarot-card-meanings`
+  },
+  keen: {
+    label:"Keen",
+    url:card => `https://www.keen.com/articles/tarot/${slugify(card.name)}-tarot-card`
+  }
+};
+
 const flipper = document.getElementById("flipper");
-const cardFront = document.getElementById("cardFront");
 const cardBack = document.getElementById("cardBack");
 const drawBtn = document.getElementById("drawBtn");
 const resetBtn = document.getElementById("resetBtn");
@@ -7,8 +224,25 @@ const currentLink = document.getElementById("currentLink");
 const currentArcana = document.getElementById("currentArcana");
 const hint = document.getElementById("hint");
 const sitePick = document.getElementById("sitePick");
+const list = document.getElementById("list");
 
 let lastCard = null;
+
+function renderList(){
+  list.innerHTML = "";
+  deck.forEach(card => {
+    const site = sitePick.value;
+    const url = siteBuilders[site].url(card);
+
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `<div class="row">
+        <a href="${url}" target="_blank">${card.name}</a>
+        <span class="site">${siteBuilders[site].label}</span>
+      </div>`;
+    list.appendChild(div);
+  });
+}
 
 function showBack(){
   lastCard = null;
@@ -24,8 +258,8 @@ function showBack(){
 function draw(){
   lastCard = deck[Math.floor(Math.random()*deck.length)];
 
-  const img = imagePath(lastCard.name);
-  cardBack.src = img;
+  cardBack.onerror = () => cardBack.src = "images/back.jpg";
+  cardBack.src = imagePath(lastCard.name);
 
   flipper.classList.add("flipped");
 
@@ -35,9 +269,8 @@ function draw(){
   currentLink.href = url;
   currentLink.target = "_blank";
 
-  currentArcana.textContent = ` — ${lastCard.arcana}`;
+  currentArcana.textContent = lastCard.arcana;
 
-  hint.textContent = "Tap the card";
   drawBtn.textContent = "Draw again";
   resetBtn.style.display = "inline-block";
 }
@@ -57,9 +290,17 @@ flipper.addEventListener("click", () => {
 });
 
 sitePick.addEventListener("change", () => {
-  if (!lastCard) return;
-  const url = siteBuilders[sitePick.value].url(lastCard);
-  currentLink.href = url;
+  renderList();
+  if (lastCard)
+    currentLink.href = siteBuilders[sitePick.value].url(lastCard);
 });
 
+renderList();
 showBack();
+
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js');
+</script>
+
+</body>
+</html>
