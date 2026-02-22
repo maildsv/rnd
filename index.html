@@ -144,12 +144,12 @@ select {
   </div>
 </div>
 
-<div id="current">
-  <a id="currentLink">Tap the card</a>
-  <div id="currentArcana"></div>
+
 </div>
 
 <div class="controls">
+  <button id="resetBtn" style="display:none;">Reset</button>
+</div>
   <button id="drawBtn">Draw</button>
   <button id="resetBtn" style="display:none;">Reset</button>
 </div>
@@ -256,7 +256,7 @@ function showBack(){
   currentLink.textContent = "Tap the card";
   currentLink.removeAttribute("href");
   currentArcana.textContent = "";
-  drawBtn.textContent = "Draw";
+  
   resetBtn.style.display = "none";
 }
 
