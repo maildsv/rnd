@@ -50,36 +50,46 @@
   <button id="drawBtn">Draw Again</button>
 
   <script>
-    const majors = ["The Fool","The Magician","The High Priestess","The Empress","The Emperor","The Hierophant","The Lovers","The Chariot","Strength","The Hermit","Wheel of Fortune","Justice","The Hanged Man","Death","Temperance","The Devil","The Tower","The Star","The Moon","The Sun","Judgement","The World"];
-    const ranks = ["Ace","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Page","Knight","Queen","King"];
-    const suits = ["Wands","Cups","Swords","Coins"];
+const majors = ["The Fool","The Magician","The High Priestess","The Empress","The Emperor","The Hierophant","The Lovers","The Chariot","Strength","The Hermit","Wheel of Fortune","Justice","The Hanged Man","Death","Temperance","The Devil","The Tower","The Star","The Moon","The Sun","Judgement","The World"];
+  const ranks = ["Ace","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Page","Knight","Queen","King"];
+  const suits = ["Wands","Cups","Swords","Coins"];
 
-    function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
+  function slugify(s){ 
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); 
+  }
+  
+  function buildDeck(){
+    const deck = [];
+    majors.forEach((name, index) => deck.push({ name, arcana: "Major", num: index }));
+    suits.forEach(suit => ranks.forEach(rank => {
+      const displaySuit = suit === "Coins" ? "Pentacles" : suit;
+      deck.push({ name: `${rank} of ${displaySuit}`, arcana: "Minor", urlSuit: suit });
+    }));
+    return deck;
+  }
+  
+  const deck = buildDeck();
+
+  function draw(){
+    const card = deck[Math.floor(Math.random()*deck.length)];
+    const nameForUrl = card.urlSuit ? card.name.replace("Pentacles", card.urlSuit) : card.name;
+    const slug = slugify(nameForUrl);
     
-    function buildDeck(){
-      const deck = [];
-      majors.forEach(name => deck.push({ name, arcana: "Major Arcana" }));
-      suits.forEach(suit => ranks.forEach(rank => {
-        const displaySuit = suit === "Coins" ? "Pentacles" : suit;
-        deck.push({ name: `${rank} of ${displaySuit}`, arcana: "Minor Arcana", urlSuit: suit });
-      }));
-      return deck;
-    }
+    // The Image URL (using a reliable tarot card image source)
+    const imgUrl = `https://www.tarot.com/images/tarot/cards/rider-waite/${slug}.jpg`;
+    const pageUrl = `https://www.tarot.com/tarot/cards/${slug}`;
     
-    const deck = buildDeck();
+    // Update the UI
+    document.getElementById('current').innerHTML = `
+      <a href="${pageUrl}" target="_blank">
+        <img src="${imgUrl}" alt="${card.name}" style="width:100%; max-width:200px; border-radius:10px; margin-bottom:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+        <br>${card.name}
+      </a>`;
+    document.getElementById('arcana').innerText = card.arcana + " Arcana";
+  }
 
-    function draw(){
-      const card = deck[Math.floor(Math.random()*deck.length)];
-      const nameForUrl = card.urlSuit ? card.name.replace("Pentacles", card.urlSuit) : card.name;
-      const url = `https://www.tarot.com/tarot/cards/${slugify(nameForUrl)}`;
-      
-      document.getElementById('current').innerHTML = `<a href="${url}">${card.name}</a>`;
-      document.getElementById('arcana').innerText = card.arcana;
-    }
-
-    // Draw immediately when the "app" opens
-    window.onload = draw;
-    document.getElementById('drawBtn').addEventListener('click', draw);
+  window.onload = draw;
+  document.getElementById('drawBtn').addEventListener('click', draw);
   </script>
 </body>
 </html>
