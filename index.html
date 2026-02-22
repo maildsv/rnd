@@ -3,12 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111111"/>
   <title>Tarot Drawer</title>
 
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <style>
     :root { --fg:#111; --bg:#fafafa; --muted:#6b7280; }
@@ -17,57 +15,59 @@
     h1 { font-size:22px; margin:0 0 8px; }
     .hint { color:var(--muted); font-size:14px; margin:0 0 12px; }
     .card { margin:12px 0 16px; padding:16px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
+
     .draw { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    button, select { border:1px solid #111; background:#111; color:#fff; padding:10px 14px; border-radius:10px; font-size:15px; }
+
+    button, select {
+      border:1px solid #111;
+      background:#111;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:10px;
+      font-size:15px;
+      cursor:pointer;
+    }
+
     select { background:#fff; color:#111; border-color:#ccc; }
 
     .imageBox { text-align:center; margin-top:10px; }
-    .imageBox a { display:inline-block; }
     .imageBox img {
       max-width:100%;
       border-radius:12px;
       box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      cursor:pointer;
     }
 
-    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:8px; margin-top:10px; }
-    .item { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; }
-    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .site { font-size:12px; color:#555; }
-    #current a { font-weight:600; }
-    #current .siteNow { margin-left:8px; font-size:12px; color:#555; }
+    #current a { font-weight:600; text-decoration:none; color:#0b57d0; }
+    #current a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Tarot Drawer</h1>
-    <p class="hint">Draw a card when ready.</p>
+    <p class="hint">Tap the card to draw.</p>
 
     <div class="card">
       <div class="draw">
         <button id="drawBtn">Draw</button>
+        <button id="resetBtn" style="display:none;">Reset</button>
+
         <select id="sitePick">
           <option value="tarotcom">Tarot.com</option>
           <option value="biddy">Biddy Tarot</option>
           <option value="labyrinthos">Labyrinthos</option>
           <option value="keen">Keen</option>
         </select>
+
         <div id="current">
-          <a id="currentLink">Draw a card</a>
-          <span class="siteNow" id="currentSite"></span>
+          <a id="currentLink">Tap card</a>
           <span id="currentArcana"></span>
         </div>
       </div>
 
       <div class="imageBox">
-        <a id="imageLink">
-          <img id="cardImage" src="images/back.jpg" alt="Card image"/>
-        </a>
+        <img id="cardImage" src="images/back.jpg" alt="Card"/>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Reference</h2>
-      <div class="grid" id="list"></div>
     </div>
   </div>
 
@@ -120,61 +120,60 @@ const siteBuilders = {
   }
 };
 
-const list = document.getElementById('list');
 const drawBtn = document.getElementById('drawBtn');
+const resetBtn = document.getElementById('resetBtn');
 const currentLink = document.getElementById('currentLink');
-const currentSite = document.getElementById('currentSite');
 const currentArcana = document.getElementById('currentArcana');
 const sitePick = document.getElementById('sitePick');
 const cardImage = document.getElementById('cardImage');
-const imageLink = document.getElementById('imageLink');
 
 let lastCard = null;
 
-function renderList(){
-  list.innerHTML = "";
-  deck.forEach(card => {
-    const site = sitePick.value;
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `<div class="row">
-        <a href="${siteBuilders[site].url(card)}" target="_blank">${card.name}</a>
-        <span class="site">${siteBuilders[site].label}</span>
-      </div>`;
-    list.appendChild(div);
-  });
+function showBack(){
+  lastCard = null;
+  cardImage.src = "images/back.jpg";
+  currentLink.textContent = "Tap card";
+  currentLink.removeAttribute("href");
+  currentArcana.textContent = "";
+  drawBtn.textContent = "Draw";
+  resetBtn.style.display = "none";
 }
 
-function updateCurrent(){
-  if (!lastCard) return;
-
+function updateCard(){
   const site = sitePick.value;
   const url = siteBuilders[site].url(lastCard);
+
+  cardImage.onerror = () => cardImage.src = "images/back.jpg";
+  cardImage.src = imagePath(lastCard.name);
 
   currentLink.textContent = lastCard.name;
   currentLink.href = url;
   currentLink.target = "_blank";
 
-  imageLink.href = url;
-  imageLink.target = "_blank";
-
-  currentSite.textContent = `(${siteBuilders[site].label})`;
   currentArcana.textContent = ` — ${lastCard.arcana}`;
 
-  const img = imagePath(lastCard.name);
-  cardImage.onerror = () => cardImage.src = "images/back.jpg";
-  cardImage.src = img;
+  drawBtn.textContent = "Draw another";
+  resetBtn.style.display = "inline-block";
 }
 
 function draw(){
   lastCard = deck[Math.floor(Math.random()*deck.length)];
-  updateCurrent();
+  updateCard();
 }
 
-sitePick.addEventListener('change', () => { renderList(); updateCurrent(); });
 drawBtn.addEventListener('click', draw);
+resetBtn.addEventListener('click', showBack);
 
-renderList();
+cardImage.addEventListener('click', () => {
+  if (!lastCard) draw();
+  else window.open(siteBuilders[sitePick.value].url(lastCard), "_blank");
+});
+
+sitePick.addEventListener('change', () => {
+  if (lastCard) updateCard();
+});
+
+showBack();
 
 if ('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
