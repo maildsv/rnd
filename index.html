@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#111111"/>
   <title>Tarot Drawer</title>
 
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <style>
     :root { --fg:#111; --bg:#fafafa; --muted:#6b7280; }
@@ -84,7 +84,6 @@ function buildDeck(){
 const deck = buildDeck();
 
 const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
-
 const imagePath = name => `images/${slugify(name)}.jpg`;
 
 const siteBuilders = {
@@ -143,28 +142,23 @@ function updateCurrent(){
   currentLink.href = siteBuilders[site].url(lastCard);
   currentSite.textContent = `(${siteBuilders[site].label})`;
   currentArcana.textContent = ` — ${lastCard.arcana}`;
-  cardImage.src = imagePath(lastCard.name);
+
+  const img = imagePath(lastCard.name);
+  cardImage.onerror = () => cardImage.src = "images/back.jpg";
+  cardImage.src = img;
 }
 
 function draw(){
   lastCard = deck[Math.floor(Math.random()*deck.length)];
-  localStorage.setItem("lastCard", JSON.stringify(lastCard));
   updateCurrent();
 }
 
 sitePick.addEventListener('change', () => { renderList(); updateCurrent(); });
 drawBtn.addEventListener('click', draw);
 
-// Show last drawn card immediately on open
-const saved = localStorage.getItem("lastCard");
-if (saved){
-  lastCard = JSON.parse(saved);
-  updateCurrent();
-}
-
 renderList();
+draw();   // ← Auto-draw on page load
 
-// Register service worker
 if ('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
