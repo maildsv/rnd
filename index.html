@@ -195,8 +195,19 @@ const siteBuilders = {
       return `https://biddytarot.com/tarot-card-meanings/minor-arcana/suit-of-${slugify(suit)}/${slugify(rank)}-of-${slugify(suit)}/`;
     }
   },
-  labyrinthos: { label:"Labyrinthos", url:card => `https://labyrinthos.co/blogs/tarot-card-meanings-list/${slugify(card.name)}-meaning-tarot-card-meanings` },
-  keen: { label:"Keen", url:card => `https://www.keen.com/articles/tarot/${slugify(card.name)}-tarot-card` }
+labyrinthos: { 
+    label: "Labyrinthos", 
+    url(card) {
+      const slug = slugify(card.name);
+      // Labyrinthos uses "meaning" for Majors and "tarot-card-meaning" for Minors
+      if (card.arcana === "Major Arcana") {
+        return `https://labyrinthos.co/blogs/tarot-card-meanings-list/${slug}-meaning-tarot-card-meanings`;
+      } else {
+        // Minor Arcana usually follows the same pattern, but ensure no "of" issues
+        return `https://labyrinthos.co/blogs/tarot-card-meanings-list/${slug}-meaning-tarot-card-meanings`;
+      }
+    }
+  },  keen: { label:"Keen", url:card => `https://www.keen.com/articles/tarot/${slugify(card.name)}-tarot-card` }
 };
 
 const flipper = document.getElementById("flipper");
